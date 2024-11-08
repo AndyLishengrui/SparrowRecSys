@@ -11,39 +11,34 @@ from collections import defaultdict
 import numpy as np
 from pyspark.sql import functions as F
 
-
 class UdfFunction:
     @staticmethod
     def sortF(movie_list, timestamp_list):
         """
-        sort by time and return the corresponding movie sequence
-        eg:
-            input: movie_list:[1,2,3]
-                   timestamp_list:[1112486027,1212546032,1012486033]
-            return [3,1,2]
+        按时间排序并返回对应的电影序列
+        例如：
+            输入: movie_list:[1,2,3]
+                 timestamp_list:[1112486027,1212546032,1012486033]
+            返回: [3,1,2]
         """
         pairs = []
         for m, t in zip(movie_list, timestamp_list):
             pairs.append((m, t))
-        # sort by time
+        # 按时间排序
         pairs = sorted(pairs, key=lambda x: x[1])
         return [x[0] for x in pairs]
 
-
 def processItemSequence(spark, rawSampleDataPath):
-    # rating data
+    # 读取评分数据
     ratingSamples = spark.read.format("csv").option("header", "true").load(rawSampleDataPath)
-    # ratingSamples.show(5)
-    # ratingSamples.printSchema()
+    # 定义排序UDF
     sortUdf = udf(UdfFunction.sortF, ArrayType(StringType()))
     userSeq = ratingSamples \
         .where(F.col("rating") >= 3.5) \
         .groupBy("userId") \
         .agg(sortUdf(F.collect_list("movieId"), F.collect_list("timestamp")).alias('movieIds')) \
         .withColumn("movieIdStr", array_join(F.col("movieIds"), " "))
-    # userSeq.select("userId", "movieIdStr").show(10, truncate = False)
     return userSeq.select('movieIdStr').rdd.map(lambda x: x[0].split(' '))
-
 
 def embeddingLSH(spark, movieEmbMap):
     movieEmbSeq = []
@@ -63,7 +58,6 @@ def embeddingLSH(spark, movieEmbMap):
     sampleEmb = Vectors.dense(0.795, 0.583, 1.120, 0.850, 0.174, -0.839, -0.0633, 0.249, 0.673, -0.237)
     bucketModel.approxNearestNeighbors(movieEmbDF, sampleEmb, 5).show(truncate=False)
 
-
 def trainItem2vec(spark, samples, embLength, embOutputPath, saveToRedis, redisKeyPrefix):
     word2vec = Word2Vec().setVectorSize(embLength).setWindowSize(5).setNumIterations(10)
     model = word2vec.fit(samples)
@@ -80,11 +74,13 @@ def trainItem2vec(spark, samples, embLength, embOutputPath, saveToRedis, redisKe
     embeddingLSH(spark, model.getVectors())
     return model
 
-
 def generate_pair(x):
-    # eg:
-    # watch sequence:['858', '50', '593', '457']
-    # return:[['858', '50'],['50', '593'],['593', '457']]
+    """
+    生成电影对
+    例如：
+    观看序列:['858', '50', '593', '457']
+    返回:[['858', '50'],['50', '593'],['593', '457']]
+    """
     pairSeq = []
     previousItem = ''
     for item in x:
@@ -94,7 +90,6 @@ def generate_pair(x):
             pairSeq.append((previousItem, item))
             previousItem = item
     return pairSeq
-
 
 def generateTransitionMatrix(samples):
     pairSamples = samples.flatMap(lambda x: generate_pair(x))
@@ -116,10 +111,9 @@ def generateTransitionMatrix(samples):
         itemDistribution[itemid] = cnt / pairTotalCount
     return transitionMatrix, itemDistribution
 
-
 def oneRandomWalk(transitionMatrix, itemDistribution, sampleLength):
     sample = []
-    # pick the first element
+    # 选择第一个元素
     randomDouble = random.random()
     firstItem = ""
     accumulateProb = 0.0
@@ -146,13 +140,11 @@ def oneRandomWalk(transitionMatrix, itemDistribution, sampleLength):
         i += 1
     return sample
 
-
 def randomWalk(transitionMatrix, itemDistribution, sampleCount, sampleLength):
     samples = []
     for i in range(sampleCount):
         samples.append(oneRandomWalk(transitionMatrix, itemDistribution, sampleLength))
     return samples
-
 
 def graphEmb(samples, spark, embLength, embOutputFilename, saveToRedis, redisKeyPrefix):
     transitionMatrix, itemDistribution = generateTransitionMatrix(samples)
@@ -161,7 +153,6 @@ def graphEmb(samples, spark, embLength, embOutputFilename, saveToRedis, redisKey
     newSamples = randomWalk(transitionMatrix, itemDistribution, sampleCount, sampleLength)
     rddSamples = spark.sparkContext.parallelize(newSamples)
     trainItem2vec(spark, rddSamples, embLength, embOutputFilename, saveToRedis, redisKeyPrefix)
-
 
 def generateUserEmb(spark, rawSampleDataPath, model, embLength, embOutputPath, saveToRedis, redisKeyPrefix):
     ratingSamples = spark.read.format("csv").option("header", "true").load(rawSampleDataPath)
@@ -182,11 +173,10 @@ def generateUserEmb(spark, rawSampleDataPath, model, embLength, embOutputPath, s
             vectors = " ".join([str(emb) for emb in row[1]])
             f.write(row[0] + ":" + vectors + "\n")
 
-
 if __name__ == '__main__':
     conf = SparkConf().setAppName('ctrModel').setMaster('local')
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
-    # Change to your own filepath
+    # 更改为你自己的文件路径
     file_path = 'file:///home/hadoop/SparrowRecSys/src/main/resources'
     rawSampleDataPath = file_path + "/webroot/sampledata/ratings.csv"
     embLength = 10

@@ -4,10 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- 项目基本信息 -->
     <groupId>com.wzhe.sparrowrecsys</groupId>
     <artifactId>SparrowRecSys</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <!-- 项目属性 -->
     <properties>
         <spark.version>2.4.3</spark.version>
         <flink.version>1.11.1</flink.version>
@@ -18,8 +20,10 @@
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
+    <!-- 构建配置 -->
     <build>
         <plugins>
+            <!-- 编译插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -29,6 +33,7 @@
                 </configuration>
             </plugin>
 
+            <!-- 打包插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -46,8 +51,8 @@
 
                 <executions>
                     <execution>
-                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
-                        <phase>package</phase> <!-- bind to the packaging phase -->
+                        <id>make-assembly</id> <!-- 用于继承合并 -->
+                        <phase>package</phase> <!-- 绑定到打包阶段 -->
                         <goals>
                             <goal>single</goal>
                         </goals>
@@ -57,10 +62,11 @@
         </plugins>
     </build>
 
+    <!-- 项目依赖 -->
     <dependencies>
 
-        <!-- online libs -->
-        <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-server -->
+        <!-- 在线库 -->
+        <!-- Jetty 服务器 -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
@@ -73,81 +79,85 @@
             <version>9.4.17.v20190418</version>
         </dependency>
 
-        <!-- offline libs -->
-        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core -->
+        <!-- 离线库 -->
+        <!-- Spark 核心库 -->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-sql -->
+        <!-- Spark SQL -->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-mllib -->
+        <!-- Spark MLLib -->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_${scala.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
 
+        <!-- MLeap 运行时 -->
         <dependency>
             <groupId>ml.combust.mleap</groupId>
             <artifactId>mleap-runtime_2.11</artifactId>
             <version>0.12.0</version>
         </dependency>
 
+        <!-- MLeap Spark -->
         <dependency>
             <groupId>ml.combust.mleap</groupId>
             <artifactId>mleap-spark_2.11</artifactId>
             <version>0.12.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.jsuereth/scala-arm -->
+        <!-- Scala ARM -->
         <dependency>
             <groupId>com.jsuereth</groupId>
             <artifactId>scala-arm_2.11</artifactId>
             <version>2.0</version>
         </dependency>
 
-
+        <!-- JPMML SparkML -->
         <dependency>
             <groupId>org.jpmml</groupId>
             <artifactId>jpmml-sparkml</artifactId>
             <version>1.4.6</version>
         </dependency>
 
+        <!-- PMML 评估器 -->
         <dependency>
             <groupId>org.jpmml</groupId>
             <artifactId>pmml-evaluator</artifactId>
             <version>1.4.3</version>
         </dependency>
 
+        <!-- Hadoop 公共库 -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>2.7.7</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-mapreduce-client-core -->
+        <!-- Hadoop MapReduce 客户端核心库 -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
             <version>2.7.7</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/redis.clients/jedis -->
+        <!-- Jedis (Redis 客户端) -->
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>3.3.0</version>
         </dependency>
 
-        <!-- http client -->
+        <!-- HTTP 客户端 -->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
@@ -179,7 +189,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpasyncclient</artifactId>
-            <version>${httpasyncclient.version}</version> <!-- 4.0.2 --> <!-- 4.1-beta1 -->
+            <version>${httpasyncclient.version}</version>
             <exclusions>
                 <exclusion>
                     <artifactId>commons-logging</artifactId>
@@ -188,6 +198,7 @@
             </exclusions>
         </dependency>
 
+        <!-- Spark Hive -->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.version}</artifactId>
@@ -200,14 +211,14 @@
             </exclusions>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.json/json -->
+        <!-- JSON 库 -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20200518</version>
         </dependency>
 
-
+        <!-- Flink Java -->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-java</artifactId>

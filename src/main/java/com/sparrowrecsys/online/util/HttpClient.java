@@ -17,37 +17,60 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
 
+/**
+ * HttpClient 类，提供异步HTTP请求的功能
+ */
 public class HttpClient {
+
+    /**
+     * 发送异步POST请求
+     * @param host 请求的主机地址
+     * @param body 请求的内容
+     * @return 响应内容
+     */
     public static String asyncSinglePostRequest(String host, String body){
         if (null == body || body.isEmpty()){
-            return null;
+            return null; // 如果请求内容为空，返回null
         }
 
         try {
+            // 创建异步HTTP客户端
             final CloseableHttpAsyncClient client = HttpAsyncClients.createDefault();
-            client.start();
+            client.start(); // 启动客户端
+            // 将请求内容转换为HttpEntity
             HttpEntity bodyEntity = new ByteArrayEntity(body.getBytes(StandardCharsets.UTF_8));
+            // 创建POST请求
             HttpPost request = new HttpPost(host);
-            request.setEntity(bodyEntity);
+            request.setEntity(bodyEntity); // 设置请求内容
+            // 发送请求并获取响应
             final Future<HttpResponse> future = client.execute(request, null);
             final HttpResponse response = future.get();
-            client.close();
-            return getRespondContent(response);
+            client.close(); // 关闭客户端
+            return getRespondContent(response); // 返回响应内容
         }catch (Exception e){
             e.printStackTrace();
             return "";
         }
     }
 
+    /**
+     * 发送多个异步POST请求
+     * @param host 请求的主机地址
+     * @param bodyMap 请求内容的映射
+     * @return 响应内容的映射
+     * @throws Exception 如果发生异常
+     */
     public static Map<String, String> asyncMapPostRequest(String host, Map<String, String> bodyMap) throws Exception {
         if (null == bodyMap || bodyMap.isEmpty()){
-            return null;
+            return null; // 如果请求内容映射为空，返回null
         }
 
         try {
+            // 创建异步HTTP客户端
             final CloseableHttpAsyncClient client = HttpAsyncClients.createDefault();
-            client.start();
+            client.start(); // 启动客户端
 
+            // 存储Future对象的映射
             HashMap<String, Future<HttpResponse>> futures = new HashMap<>();
             for (Map.Entry<String, String> bodyEntry : bodyMap.entrySet()) {
                 String body = bodyEntry.getValue();
@@ -57,20 +80,27 @@ public class HttpClient {
                 futures.put(bodyEntry.getKey(), client.execute(request, null));
             }
 
+            // 存储响应内容的映射
             HashMap<String, String> responds = new HashMap<>();
             for (Map.Entry<String, Future<HttpResponse>> future : futures.entrySet()) {
                 final HttpResponse response = future.getValue().get();
                 responds.put(future.getKey(), getRespondContent(response));
             }
 
-            client.close();
-            return responds;
+            client.close(); // 关闭客户端
+            return responds; // 返回响应内容的映射
         }catch (Exception e){
             e.printStackTrace();
             return null;
         }
     }
 
+    /**
+     * 获取响应内容
+     * @param response HTTP响应
+     * @return 响应内容
+     * @throws Exception 如果发生异常
+     */
     public static String getRespondContent(HttpResponse response) throws Exception{
         HttpEntity entity = response.getEntity();
         InputStream is = entity.getContent();
@@ -83,81 +113,29 @@ public class HttpClient {
     }
 
     public static void main(String[] args){
-
-
-        //keys must be equal to:
-        // movieAvgRating,
-        // movieGenre1,movieGenre2,movieGenre3,
-        // movieId,
-        // movieRatingCount,
-        // movieRatingStddev,
-        // rating,
-        // releaseYear,
-        // timestamp,
-        // userAvgRating,
-        // userAvgReleaseYear,
-        // userGenre1,userGenre2,userGenre3,userGenre4,userGenre5,
-        // userId,
-        // userRatedMovie1,
-        // userRatedMovie2,
-        // userRatedMovie3,
-        // userRatedMovie4,
-        // userRatedMovie5,
-        // userRatingCount,
-        // userRatingStddev,
-        // userReleaseYearStddev"
-        //}
+        // 创建第一个请求实例
         JSONObject instance = new JSONObject();
-        instance.put("userId",10351);
-        instance.put("movieId",52);
+        instance.put("userId", 10351);
+        instance.put("movieId", 52);
 
-        /*
-        instance.put("timestamp",1254725234);
-        instance.put("userGenre1","Thriller");
-        instance.put("userGenre2","Crime");
-        instance.put("userGenre3","Drama");
-        instance.put("userGenre4","Comedy");
-        instance.put("userGenre5","Action");
-
-        instance.put("movieGenre1","Comedy");
-        instance.put("movieGenre2","Drama");
-        instance.put("movieGenre3","Romance");
-
-        instance.put("userRatedMovie1",608);
-        instance.put("userRatedMovie2",6);
-        instance.put("userRatedMovie3",1);
-        instance.put("userRatedMovie4",32);
-        instance.put("userRatedMovie5",25);
-
-        instance.put("movieId",52);
-        instance.put("rating",4.0);
-
-        instance.put("releaseYear",1995);
-        instance.put("movieRatingCount",2033);
-        instance.put("movieAvgRating",3.54);
-        instance.put("movieRatingStddev",0.91);
-        instance.put("userRatingCount",7);
-        instance.put("userAvgReleaseYear","1995.43");
-        instance.put("userReleaseYearStddev",0.53);
-        instance.put("userAvgRating",3.86);
-        instance.put("userRatingStddev",0.69);*/
-
-
+        // 创建第二个请求实例
         JSONObject instance2 = new JSONObject();
-        instance2.put("userId",10351);
-        instance2.put("movieId",53);
+        instance2.put("userId", 10351);
+        instance2.put("movieId", 53);
 
+        // 将两个实例放入JSONArray
         JSONArray instances = new JSONArray();
         instances.put(instance);
         instances.put(instance2);
 
+        // 创建请求的根对象
         JSONObject instancesRoot = new JSONObject();
         instancesRoot.put("instances", instances);
 
+        // 打印请求内容
         System.out.println(instancesRoot.toString());
 
-
-
+        // 发送异步POST请求并打印响应内容
         System.out.println(asyncSinglePostRequest("http://localhost:8501/v1/models/recmodel:predict", instancesRoot.toString()));
     }
 }

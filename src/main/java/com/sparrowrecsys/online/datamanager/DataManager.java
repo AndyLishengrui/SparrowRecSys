@@ -7,17 +7,19 @@ import java.io.File;
 import java.util.*;
 
 /**
- * DataManager is an utility class, takes charge of all data loading logic.
+ * DataManager 是一个工具类，负责所有的数据加载逻辑。
  */
-
 public class DataManager {
-    //singleton instance
+    // 单例实例
     private static volatile DataManager instance;
+    // 存储电影数据的映射
     HashMap<Integer, Movie> movieMap;
+    // 存储用户数据的映射
     HashMap<Integer, User> userMap;
-    //genre reverse index for quick querying all movies in a genre
+    // 类型反向索引，用于快速查询某类型的所有电影
     HashMap<String, List<Movie>> genreReverseIndexMap;
 
+    // 私有构造函数，初始化数据结构
     private DataManager(){
         this.movieMap = new HashMap<>();
         this.userMap = new HashMap<>();
@@ -25,6 +27,7 @@ public class DataManager {
         instance = this;
     }
 
+    // 获取单例实例
     public static DataManager getInstance(){
         if (null == instance){
             synchronized (DataManager.class){
@@ -36,7 +39,7 @@ public class DataManager {
         return instance;
     }
 
-    //load data from file system including movie, rating, link data and model data like embedding vectors.
+    // 从文件系统加载数据，包括电影、评分、链接数据和模型数据如嵌入向量
     public void loadData(String movieDataPath, String linkDataPath, String ratingDataPath, String movieEmbPath, String userEmbPath, String movieRedisKey, String userRedisKey) throws Exception{
         loadMovieData(movieDataPath);
         loadLinkData(linkDataPath);
@@ -45,11 +48,10 @@ public class DataManager {
         if (Config.IS_LOAD_ITEM_FEATURE_FROM_REDIS){
             loadMovieFeatures("mf:");
         }
-
         loadUserEmb(userEmbPath, userRedisKey);
     }
 
-    //load movie data from movies.csv
+    // 从movies.csv加载电影数据
     private void loadMovieData(String movieDataPath) throws Exception{
         System.out.println("Loading movie data from " + movieDataPath + " ...");
         boolean skipFirstLine = true;
@@ -86,7 +88,7 @@ public class DataManager {
         System.out.println("Loading movie data completed. " + this.movieMap.size() + " movies in total.");
     }
 
-    //load movie embedding
+    // 加载电影嵌入向量
     private void loadMovieEmb(String movieEmbPath, String embKey) throws Exception{
         if (Config.EMB_DATA_SOURCE.equals(Config.DATA_SOURCE_FILE)) {
             System.out.println("Loading movie embedding from " + movieEmbPath + " ...");
@@ -106,7 +108,7 @@ public class DataManager {
                 }
             }
             System.out.println("Loading movie embedding completed. " + validEmbCount + " movie embeddings in total.");
-        }else{
+        } else {
             System.out.println("Loading movie embedding from Redis ...");
             Set<String> movieEmbKeys = RedisClient.getInstance().keys(embKey + "*");
             int validEmbCount = 0;
@@ -123,7 +125,7 @@ public class DataManager {
         }
     }
 
-    //load movie features
+    // 加载电影特征
     private void loadMovieFeatures(String movieFeaturesPrefix) throws Exception{
         System.out.println("Loading movie features from Redis ...");
         Set<String> movieFeaturesKeys = RedisClient.getInstance().keys(movieFeaturesPrefix + "*");
@@ -140,7 +142,7 @@ public class DataManager {
         System.out.println("Loading movie features completed. " + validFeaturesCount + " movie features in total.");
     }
 
-    //load user embedding
+    // 加载用户嵌入向量
     private void loadUserEmb(String userEmbPath, String embKey) throws Exception{
         if (Config.EMB_DATA_SOURCE.equals(Config.DATA_SOURCE_FILE)) {
             System.out.println("Loading user embedding from " + userEmbPath + " ...");
@@ -163,21 +165,21 @@ public class DataManager {
         }
     }
 
-    //parse release year
+    // 解析上映年份
     private int parseReleaseYear(String rawTitle){
         if (null == rawTitle || rawTitle.trim().length() < 6){
             return -1;
-        }else{
+        } else {
             String yearString = rawTitle.trim().substring(rawTitle.length()-5, rawTitle.length()-1);
-            try{
+            try {
                 return Integer.parseInt(yearString);
-            }catch (NumberFormatException exception){
+            } catch (NumberFormatException exception) {
                 return -1;
             }
         }
     }
 
-    //load links data from links.csv
+    // 从links.csv加载链接数据
     private void loadLinkData(String linkDataPath) throws Exception{
         System.out.println("Loading link data from " + linkDataPath + " ...");
         int count = 0;
@@ -204,7 +206,7 @@ public class DataManager {
         System.out.println("Loading link data completed. " + count + " links in total.");
     }
 
-    //load ratings data from ratings.csv
+    // 从ratings.csv加载评分数据
     private void loadRatingData(String ratingDataPath) throws Exception{
         System.out.println("Loading rating data from " + ratingDataPath + " ...");
         boolean skipFirstLine = true;
@@ -218,7 +220,7 @@ public class DataManager {
                 }
                 String[] linkData = ratingRawData.split(",");
                 if (linkData.length == 4){
-                    count ++;
+                    count++;
                     Rating rating = new Rating();
                     rating.setUserId(Integer.parseInt(linkData[0]));
                     rating.setMovieId(Integer.parseInt(linkData[1]));
@@ -237,11 +239,10 @@ public class DataManager {
                 }
             }
         }
-
         System.out.println("Loading rating data completed. " + count + " ratings in total.");
     }
 
-    //add movie to genre reversed index
+    // 将电影添加到类型反向索引中
     private void addMovie2GenreIndex(String genre, Movie movie){
         if (!this.genreReverseIndexMap.containsKey(genre)){
             this.genreReverseIndexMap.put(genre, new ArrayList<>());
@@ -249,13 +250,17 @@ public class DataManager {
         this.genreReverseIndexMap.get(genre).add(movie);
     }
 
-    //get movies by genre, and order the movies by sortBy method
+    // 根据类型获取电影，并按sortBy方法排序
     public List<Movie> getMoviesByGenre(String genre, int size, String sortBy){
         if (null != genre){
             List<Movie> movies = new ArrayList<>(this.genreReverseIndexMap.get(genre));
             switch (sortBy){
-                case "rating":movies.sort((m1, m2) -> Double.compare(m2.getAverageRating(), m1.getAverageRating()));break;
-                case "releaseYear": movies.sort((m1, m2) -> Integer.compare(m2.getReleaseYear(), m1.getReleaseYear()));break;
+                case "rating":
+                    movies.sort((m1, m2) -> Double.compare(m2.getAverageRating(), m1.getAverageRating()));
+                    break;
+                case "releaseYear":
+                    movies.sort((m1, m2) -> Integer.compare(m2.getReleaseYear(), m1.getReleaseYear()));
+                    break;
                 default:
             }
 
@@ -267,27 +272,31 @@ public class DataManager {
         return null;
     }
 
-    //get top N movies order by sortBy method
+    // 获取前N部电影，并按sortBy方法排序
     public List<Movie> getMovies(int size, String sortBy){
-            List<Movie> movies = new ArrayList<>(movieMap.values());
-            switch (sortBy){
-                case "rating":movies.sort((m1, m2) -> Double.compare(m2.getAverageRating(), m1.getAverageRating()));break;
-                case "releaseYear": movies.sort((m1, m2) -> Integer.compare(m2.getReleaseYear(), m1.getReleaseYear()));break;
-                default:
-            }
+        List<Movie> movies = new ArrayList<>(movieMap.values());
+        switch (sortBy){
+            case "rating":
+                movies.sort((m1, m2) -> Double.compare(m2.getAverageRating(), m1.getAverageRating()));
+                break;
+            case "releaseYear":
+                movies.sort((m1, m2) -> Integer.compare(m2.getReleaseYear(), m1.getReleaseYear()));
+                break;
+            default:
+        }
 
-            if (movies.size() > size){
-                return movies.subList(0, size);
-            }
-            return movies;
+        if (movies.size() > size){
+            return movies.subList(0, size);
+        }
+        return movies;
     }
 
-    //get movie object by movie id
+    // 根据电影ID获取电影对象
     public Movie getMovieById(int movieId){
         return this.movieMap.get(movieId);
     }
 
-    //get user object by user id
+    // 根据用户ID获取用户对象
     public User getUserById(int userId){
         return this.userMap.get(userId);
     }

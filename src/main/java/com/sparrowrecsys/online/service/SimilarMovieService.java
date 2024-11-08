@@ -11,28 +11,33 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * SimilarMovieService, recommend similar movies given by a specific movie
+ * SimilarMovieService 类，根据特定电影推荐相似电影
  */
 public class SimilarMovieService extends HttpServlet {
+    @Override
     protected void doGet(HttpServletRequest request,
                          HttpServletResponse response) throws IOException {
         try {
+            // 设置响应内容类型为JSON
             response.setContentType("application/json");
+            // 设置响应状态为200 OK
             response.setStatus(HttpServletResponse.SC_OK);
+            // 设置响应字符编码为UTF-8
             response.setCharacterEncoding("UTF-8");
+            // 设置允许跨域访问
             response.setHeader("Access-Control-Allow-Origin", "*");
 
-            //movieId
+            // 获取电影ID参数
             String movieId = request.getParameter("movieId");
-            //number of returned movies
+            // 获取返回电影数量参数
             String size = request.getParameter("size");
-            //model of calculating similarity, e.g. embedding, graph-embedding
+            // 获取计算相似度的模型参数，例如embedding, graph-embedding
             String model = request.getParameter("model");
 
-            //use SimilarMovieFlow to get similar movies
+            // 使用 SimilarMovieProcess 获取相似电影列表
             List<Movie> movies = SimilarMovieProcess.getRecList(Integer.parseInt(movieId), Integer.parseInt(size), model);
 
-            //convert movie list to json format and return
+            // 将电影列表转换为JSON格式并返回
             ObjectMapper mapper = new ObjectMapper();
             String jsonMovies = mapper.writeValueAsString(movies);
             response.getWriter().println(jsonMovies);

@@ -24,13 +24,14 @@ object Embedding {
   val redisEndpoint = "localhost"
   val redisPort = 6379
 
+  // 处理物品序列数据
   def processItemSequence(sparkSession: SparkSession, rawSampleDataPath: String): RDD[Seq[String]] ={
 
-    //path of rating data
+    // 评分数据的路径
     val ratingsResourcesPath = this.getClass.getResource(rawSampleDataPath)
     val ratingSamples = sparkSession.read.format("csv").option("header", "true").load(ratingsResourcesPath.getPath)
 
-    //sort by timestamp udf
+    // 按时间戳排序的UDF
     val sortUdf: UserDefinedFunction = udf((rows: Seq[Row]) => {
       rows.map { case Row(movieId: String, timestamp: String) => (movieId, timestamp) }
         .sortBy { case (_, timestamp) => timestamp }
@@ -39,7 +40,7 @@ object Embedding {
 
     ratingSamples.printSchema()
 
-    //process rating data then generate rating movie sequence data
+    // 处理评分数据并生成评分电影序列数据
     val userSeq = ratingSamples
       .where(col("rating") >= 3.5)
       .groupBy("userId")
@@ -50,6 +51,7 @@ object Embedding {
     userSeq.select("movieIdStr").rdd.map(r => r.getAs[String]("movieIdStr").split(" ").toSeq)
   }
 
+  // 生成用户嵌入
   def generateUserEmb(sparkSession: SparkSession, rawSampleDataPath: String, word2VecModel: Word2VecModel, embLength:Int, embOutputFilename:String, saveToRedis:Boolean, redisKeyPrefix:String): Unit ={
     val ratingsResourcesPath = this.getClass.getResource(rawSampleDataPath)
     val ratingSamples = sparkSession.read.format("csv").option("header", "true").load(ratingsResourcesPath.getPath)
@@ -76,8 +78,6 @@ object Embedding {
         userEmbeddings.append((userId,userEmb))
       })
 
-
-
     val embFolderPath = this.getClass.getResource("/webroot/modeldata/")
     val file = new File(embFolderPath.getPath + embOutputFilename)
     val bw = new BufferedWriter(new FileWriter(file))
@@ -90,7 +90,7 @@ object Embedding {
     if (saveToRedis) {
       val redisClient = new Jedis(redisEndpoint, redisPort)
       val params = SetParams.setParams()
-      //set ttl to 24hs
+      // 设置TTL为24小时
       params.ex(60 * 60 * 24)
 
       for (userEmb <- userEmbeddings) {
@@ -100,6 +100,7 @@ object Embedding {
     }
   }
 
+  // 训练Item2Vec模型
   def trainItem2vec(sparkSession: SparkSession, samples : RDD[Seq[String]], embLength:Int, embOutputFilename:String, saveToRedis:Boolean, redisKeyPrefix:String): Word2VecModel = {
     val word2vec = new Word2Vec()
       .setVectorSize(embLength)
@@ -107,7 +108,6 @@ object Embedding {
       .setNumIterations(10)
 
     val model = word2vec.fit(samples)
-
 
     val synonyms = model.findSynonyms("158", 20)
     for ((synonym, cosineSimilarity) <- synonyms) {
@@ -125,7 +125,7 @@ object Embedding {
     if (saveToRedis) {
       val redisClient = new Jedis(redisEndpoint, redisPort)
       val params = SetParams.setParams()
-      //set ttl to 24hs
+      // 设置TTL为24小时
       params.ex(60 * 60 * 24)
       for (movieId <- model.getVectors.keys) {
         redisClient.set(redisKeyPrefix + ":" + movieId, model.getVectors(movieId).mkString(" "), params)
@@ -137,10 +137,11 @@ object Embedding {
     model
   }
 
+  // 单次随机游走
   def oneRandomWalk(transitionMatrix : mutable.Map[String, mutable.Map[String, Double]], itemDistribution : mutable.Map[String, Double], sampleLength:Int): Seq[String] ={
     val sample = mutable.ListBuffer[String]()
 
-    //pick the first element
+    // 选择第一个元素
     val randomDouble = Random.nextDouble()
     var firstItem = ""
     var accumulateProb:Double = 0D
@@ -175,6 +176,7 @@ object Embedding {
     Seq(sample.toList : _*)
   }
 
+  // 多次随机游走
   def randomWalk(transitionMatrix : mutable.Map[String, mutable.Map[String, Double]], itemDistribution : mutable.Map[String, Double], sampleCount:Int, sampleLength:Int): Seq[Seq[String]] ={
     val samples = mutable.ListBuffer[Seq[String]]()
     for(_ <- 1 to sampleCount) {
@@ -183,6 +185,7 @@ object Embedding {
     Seq(samples.toList : _*)
   }
 
+  // 生成转移矩阵
   def generateTransitionMatrix(samples : RDD[Seq[String]]): (mutable.Map[String, mutable.Map[String, Double]], mutable.Map[String, Double]) ={
     val pairSamples = samples.flatMap[(String, String)]( sample => {
       var pairSeq = Seq[(String,String)]()
@@ -227,12 +230,13 @@ object Embedding {
     (transitionMatrix, itemDistribution)
   }
 
+  // 使用LSH进行嵌入
   def embeddingLSH(spark:SparkSession, movieEmbMap:Map[String, Array[Float]]): Unit ={
 
     val movieEmbSeq = movieEmbMap.toSeq.map(item => (item._1, Vectors.dense(item._2.map(f => f.toDouble))))
     val movieEmbDF = spark.createDataFrame(movieEmbSeq).toDF("movieId", "emb")
 
-    //LSH bucket model
+    // LSH桶模型
     val bucketProjectionLSH = new BucketedRandomProjectionLSH()
       .setBucketLength(0.1)
       .setNumHashTables(3)
@@ -246,11 +250,12 @@ object Embedding {
     println("movieId, emb, bucketId data result:")
     embBucketResult.show(10, truncate = false)
 
-    println("Approximately searching for 5 nearest neighbors of the sample embedding:")
+    println("大约搜索样本嵌入的5个最近邻:")
     val sampleEmb = Vectors.dense(0.795,0.583,1.120,0.850,0.174,-0.839,-0.0633,0.249,0.673,-0.237)
     bucketModel.approxNearestNeighbors(movieEmbDF, sampleEmb, 5).show(truncate = false)
   }
 
+  // 图嵌入
   def graphEmb(samples : RDD[Seq[String]], sparkSession: SparkSession, embLength:Int, embOutputFilename:String, saveToRedis:Boolean, redisKeyPrefix:String): Word2VecModel ={
     val transitionMatrixAndItemDis = generateTransitionMatrix(samples)
 
@@ -279,8 +284,8 @@ object Embedding {
     val embLength = 10
 
     val samples = processItemSequence(spark, rawSampleDataPath)
-    val model = trainItem2vec(spark, samples, embLength, "item2vecEmb.csv", saveToRedis = false, "i2vEmb")
-    //graphEmb(samples, spark, embLength, "itemGraphEmb.csv", saveToRedis = true, "graphEmb")
-    //generateUserEmb(spark, rawSampleDataPath, model, embLength, "userEmb.csv", saveToRedis = false, "uEmb")
+    val model = trainItem2vec(spark, samples, embLength, "item2vecEmb.csv", saveToRedis = true, "i2vEmb")
+    graphEmb(samples, spark, embLength, "itemGraphEmb.csv", saveToRedis = true, "graphEmb")
+    generateUserEmb(spark, rawSampleDataPath, model, embLength, "userEmb.csv", saveToRedis = true, "uEmb")
   }
 }

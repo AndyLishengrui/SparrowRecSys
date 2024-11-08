@@ -12,29 +12,34 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * RecommendationService, provide recommendation service based on different input
+ * RecommendationService 类，提供基于不同输入的推荐服务
  */
-
 public class RecommendationService extends HttpServlet {
+    @Override
     protected void doGet(HttpServletRequest request,
                          HttpServletResponse response) throws ServletException,
             IOException {
         try {
+            // 设置响应内容类型为JSON
             response.setContentType("application/json");
+            // 设置响应状态为200 OK
             response.setStatus(HttpServletResponse.SC_OK);
+            // 设置响应字符编码为UTF-8
             response.setCharacterEncoding("UTF-8");
+            // 设置允许跨域访问
             response.setHeader("Access-Control-Allow-Origin", "*");
 
-            //genre - movie category
+            // 获取电影类型参数
             String genre = request.getParameter("genre");
-            //number of returned movies
+            // 获取返回电影数量参数
             String size = request.getParameter("size");
-            //ranking algorithm
+            // 获取排序算法参数
             String sortby = request.getParameter("sortby");
-            //a simple method, just fetch all the movie in the genre
-            List<Movie> movies = DataManager.getInstance().getMoviesByGenre(genre, Integer.parseInt(size),sortby);
 
-            //convert movie list to json format and return
+            // 根据电影类型、数量和排序算法获取电影列表
+            List<Movie> movies = DataManager.getInstance().getMoviesByGenre(genre, Integer.parseInt(size), sortby);
+
+            // 将电影列表转换为JSON格式并返回
             ObjectMapper mapper = new ObjectMapper();
             String jsonMovies = mapper.writeValueAsString(movies);
             response.getWriter().println(jsonMovies);
