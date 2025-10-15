@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Popularity Recommendation</title>
+    <script src="./js/jquery-3.2.1.min.js"></script>
+    <script src="./js/recsys.js"></script>
+    <style>
+        .frontpage-section-header { font-size: 24px; font-weight: bold; margin: 20px 0; }
+        .movie-card { border: 1px solid #ccc; margin: 10px; padding: 10px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <h1>测试热度推荐功能</h1>
+    <div id="testPage"></div>
+    
+    <script>
+        console.log("开始测试...");
+        var baseUrl = window.location.protocol + "//" + window.location.host + "/";
+        console.log("baseUrl:", baseUrl);
+        
+        // 测试API
+        fetch(baseUrl + "getrecforyou?id=1&size=5&model=popularity")
+            .then(response => response.json())
+            .then(data => {
+                console.log("API测试成功:", data);
+                
+                // 创建简单的HTML
+                var html = '<h2>热度推荐 (API直接调用)</h2>';
+                data.forEach(movie => {
+                    html += '<div class="movie-card">';
+                    html += '<h3>' + movie.title + '</h3>';
+                    html += '<p>评价数: ' + movie.ratingNumber + '</p>';
+                    html += '<p>平均评分: ' + movie.averageRating.toFixed(2) + '</p>';
+                    html += '</div>';
+                });
+                document.getElementById('testPage').innerHTML = html;
+                
+                // 测试recsys.js函数
+                console.log("测试addRecForYou函数...");
+                addRecForYou('#testPage', 'popularity-test', 1, 'popularity', baseUrl);
+            })
+            .catch(error => {
+                console.error("API测试失败:", error);
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>热度推荐测试</title>
+    <style>
+        .popularity-section {
+            background-color: #f0f8ff;
+            border: 2px solid #4169e1;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .movie-item {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+        }
+        .movie-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .movie-stats {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SparrowRecSys - 热度推荐测试</h1>
+    
+    <div class="popularity-section">
+        <h2>🔥 热度推荐 (Most Popular Movies)</h2>
+        <p>按评价次数排序的热门电影</p>
+        <div id="movies-container">加载中...</div>
+    </div>
+    
+    <script>
+        // 使用原生JavaScript获取热度推荐
+        fetch('/getrecforyou?id=1&size=10&model=popularity')
+            .then(response => response.json())
+            .then(movies => {
+                console.log('获取到热度推荐:', movies);
+                
+                let html = '';
+                movies.forEach((movie, index) => {
+                    html += `
+                        <div class="movie-item">
+                            <div class="movie-title">${index + 1}. ${movie.title}</div>
+                            <div class="movie-stats">
+                                📅 ${movie.releaseYear} | 
+                                ⭐ ${movie.averageRating.toFixed(2)} | 
+                                👥 ${movie.ratingNumber} 评价 |
+                                🏷️ ${movie.genres.join(', ')}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('movies-container').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('获取推荐失败:', error);
+                document.getElementById('movies-container').innerHTML = 
+                    '<p style="color: red;">加载失败: ' + error.message + '</p>';
+            });
+    </script>
+</body>
+</html>

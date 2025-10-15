@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>海报链接测试</title>
+    <script src="./js/poster-links.js"></script>
+    <style>
+        .poster-test {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+        .poster-test img {
+            width: 154px;
+            height: 231px;
+            border: 1px solid #ccc;
+        }
+        .poster-info {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>电影海报链接测试</h1>
+    
+    <div>
+        <h2>测试不同类型的电影海报</h2>
+        <div id="poster-container"></div>
+    </div>
+    
+    <script>
+        // 测试不同类型的电影ID
+        var testMovieIds = [
+            1,      // 经典电影（应该有本地海报）
+            500,    // 本地海报范围内
+            1001,   // 超出本地海报范围（应该使用TMDB）
+            2000,   // TMDB链接
+            5000,   // 更高ID的TMDB链接
+            164449, // 非常高的ID（新增电影）
+            999999  // 不存在的电影（应该使用默认海报）
+        ];
+        
+        var container = document.getElementById('poster-container');
+        
+        testMovieIds.forEach(function(movieId) {
+            var posterDiv = document.createElement('div');
+            posterDiv.className = 'poster-test';
+            
+            var img = document.createElement('img');
+            img.src = getPosterUrl(movieId);
+            img.onerror = function() {
+                handlePosterError(this, movieId);
+            };
+            
+            var info = document.createElement('div');
+            info.className = 'poster-info';
+            info.innerHTML = '电影ID: ' + movieId + '<br>URL: ' + getPosterUrl(movieId);
+            
+            posterDiv.appendChild(img);
+            posterDiv.appendChild(info);
+            container.appendChild(posterDiv);
+        });
+        
+        // 显示统计信息
+        var stats = document.createElement('div');
+        stats.style.marginTop = '20px';
+        stats.style.padding = '10px';
+        stats.style.backgroundColor = '#f0f0f0';
+        stats.innerHTML = '<h3>海报链接统计</h3>' +
+                         '<p>TMDB链接映射数量: ' + Object.keys(posterLinksMap).length + '</p>' +
+                         '<p>测试电影数量: ' + testMovieIds.length + '</p>';
+        document.body.appendChild(stats);
+    </script>
+</body>
+</html>

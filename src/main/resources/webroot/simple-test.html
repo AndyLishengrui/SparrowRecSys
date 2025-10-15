@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+    <script src="./js/jquery-3.2.1.min.js"></script>
+</head>
+<body>
+    <h1>简单测试</h1>
+    <div id="result"></div>
+    
+    <script>
+        console.log("开始测试...");
+        
+        // 直接测试jQuery是否工作
+        $(document).ready(function() {
+            console.log("jQuery loaded successfully");
+            
+            // 测试API调用
+            $.getJSON("/getrecforyou?id=1&size=3&model=popularity", function(data) {
+                console.log("API success:", data);
+                
+                var html = "<h2>热度推荐结果：</h2>";
+                $.each(data, function(i, movie) {
+                    html += "<p>" + movie.title + " - " + movie.ratingNumber + " 评价</p>";
+                });
+                
+                $("#result").html(html);
+            }).fail(function(xhr, status, error) {
+                console.error("API failed:", status, error);
+                $("#result").html("<p style='color:red'>API调用失败: " + error + "</p>");
+            });
+        });
+    </script>
+</body>
+</html>
