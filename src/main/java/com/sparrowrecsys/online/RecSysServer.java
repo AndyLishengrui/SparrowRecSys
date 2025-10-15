@@ -98,6 +98,7 @@ public class RecSysServer {
         context.addServlet(new ServletHolder(new SimilarMovieService()), "/getsimilarmovie");
         context.addServlet(new ServletHolder(new RecommendationService()), "/getrecommendation");
         context.addServlet(new ServletHolder(new RecForYouService()), "/getrecforyou");
+        context.addServlet(new ServletHolder(new ModelService()), "/getmodel");
 
         // 设置 URL 处理器
         server.setHandler(context);

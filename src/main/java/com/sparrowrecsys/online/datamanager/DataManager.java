@@ -51,6 +51,30 @@ public class DataManager {
         loadUserEmb(userEmbPath, userRedisKey);
     }
 
+    // 重新加载embedding模型
+    public void reloadEmbeddings(String modelDataPath, String movieEmbFile, String userEmbFile) throws Exception {
+        String movieEmbPath = modelDataPath + movieEmbFile;
+        String userEmbPath = modelDataPath + userEmbFile;
+        
+        System.out.println("重新加载embedding模型:");
+        System.out.println("Movie embedding: " + movieEmbPath);
+        System.out.println("User embedding: " + userEmbPath);
+        
+        // 清除现有的embedding数据
+        for (Movie movie : movieMap.values()) {
+            movie.setEmb(null);
+        }
+        for (User user : userMap.values()) {
+            user.setEmb(null);
+        }
+        
+        // 重新加载embedding
+        loadMovieEmb(movieEmbPath, "i2vEmb");
+        loadUserEmb(userEmbPath, "uEmb");
+        
+        System.out.println("✅ Embedding模型重新加载完成!");
+    }
+
     // 从movies.csv加载电影数据
     private void loadMovieData(String movieDataPath) throws Exception{
         System.out.println("Loading movie data from " + movieDataPath + " ...");
@@ -152,7 +176,16 @@ public class DataManager {
                     String userRawEmbData = scanner.nextLine();
                     String[] userEmbData = userRawEmbData.split(":");
                     if (userEmbData.length == 2) {
-                        User u = getUserById(Integer.parseInt(userEmbData[0]));
+                        // 支持两种用户ID格式: 纯数字或 "user_数字"
+                        int userId;
+                        String userIdStr = userEmbData[0];
+                        if (userIdStr.startsWith("user_")) {
+                            userId = Integer.parseInt(userIdStr.substring(5)); // 去掉"user_"前缀
+                        } else {
+                            userId = Integer.parseInt(userIdStr);
+                        }
+                        
+                        User u = getUserById(userId);
                         if (null == u) {
                             continue;
                         }

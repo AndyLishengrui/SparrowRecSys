@@ -85,6 +85,13 @@ public class RecForYouProcess {
                 // 调用神经协同过滤模型进行排序
                 callNeuralCFTFServing(user, candidates, candidateScoreMap);
                 break;
+            case "popularity":
+                // 按热度（评价次数）排序
+                for (Movie candidate : candidates){
+                    double popularityScore = calculatePopularityScore(candidate);
+                    candidateScoreMap.put(candidate, popularityScore);
+                }
+                break;
             default:
                 // 默认按候选集中的顺序排序
                 for (int i = 0 ; i < candidates.size(); i++){
@@ -109,6 +116,19 @@ public class RecForYouProcess {
             return -1;
         }
         return user.getEmb().calculateSimilarity(candidate.getEmb());
+    }
+
+    /**
+     * 计算电影热度分数（基于评价次数）
+     * @param candidate 候选电影
+     * @return 热度分数（评价次数）
+     */
+    public static double calculatePopularityScore(Movie candidate){
+        if (null == candidate){
+            return 0;
+        }
+        // 返回该电影的评价次数作为热度分数
+        return (double) candidate.getRatingNumber();
     }
 
     /**
