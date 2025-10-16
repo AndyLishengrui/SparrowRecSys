@@ -1,7 +1,9 @@
 package com.sparrowrecsys.online.datamanager;
 
 import com.sparrowrecsys.online.util.Config;
+import com.sparrowrecsys.online.util.PerformanceMonitor;
 import com.sparrowrecsys.online.util.Utility;
+import redis.clients.jedis.Jedis;
 
 import java.io.File;
 import java.util.*;
@@ -41,6 +43,8 @@ public class DataManager {
 
     // 从文件系统加载数据，包括电影、评分、链接数据和模型数据如嵌入向量
     public void loadData(String movieDataPath, String linkDataPath, String ratingDataPath, String movieEmbPath, String userEmbPath, String movieRedisKey, String userRedisKey) throws Exception{
+        PerformanceMonitor.startTimer("DataManager.loadData");
+        
         loadMovieData(movieDataPath);
         loadLinkData(linkDataPath);
         loadRatingData(ratingDataPath);
@@ -49,6 +53,9 @@ public class DataManager {
             loadMovieFeatures("mf:");
         }
         loadUserEmb(userEmbPath, userRedisKey);
+        
+        PerformanceMonitor.endTimer("DataManager.loadData");
+        PerformanceMonitor.printReport();
     }
 
     // 重新加载embedding模型
@@ -115,6 +122,7 @@ public class DataManager {
     // 加载电影嵌入向量
     private void loadMovieEmb(String movieEmbPath, String embKey) throws Exception{
         if (Config.EMB_DATA_SOURCE.equals(Config.DATA_SOURCE_FILE)) {
+            PerformanceMonitor.startTimer("LoadMovieEmb_File");
             System.out.println("Loading movie embedding from " + movieEmbPath + " ...");
             int validEmbCount = 0;
             try (Scanner scanner = new Scanner(new File(movieEmbPath))) {
@@ -131,44 +139,27 @@ public class DataManager {
                     }
                 }
             }
+            PerformanceMonitor.endTimer("LoadMovieEmb_File");
             System.out.println("Loading movie embedding completed. " + validEmbCount + " movie embeddings in total.");
         } else {
-            System.out.println("Loading movie embedding from Redis ...");
-            Set<String> movieEmbKeys = RedisClient.getInstance().keys(embKey + "*");
-            int validEmbCount = 0;
-            for (String movieEmbKey : movieEmbKeys){
-                String movieId = movieEmbKey.split(":")[1];
-                Movie m = getMovieById(Integer.parseInt(movieId));
-                if (null == m) {
-                    continue;
-                }
-                m.setEmb(Utility.parseEmbStr(RedisClient.getInstance().get(movieEmbKey)));
-                validEmbCount++;
-            }
-            System.out.println("Loading movie embedding completed. " + validEmbCount + " movie embeddings in total.");
+            // 使用批量加载器优化Redis加载
+            System.out.println("🚀 Using optimized batch loading for movie embeddings from Redis ...");
+            int validEmbCount = BatchDataLoader.batchLoadMovieEmbeddings(this.movieMap, embKey + ":");
+            System.out.println("✅ Optimized batch loading completed. " + validEmbCount + " movie embeddings loaded.");
         }
     }
 
     // 加载电影特征
     private void loadMovieFeatures(String movieFeaturesPrefix) throws Exception{
-        System.out.println("Loading movie features from Redis ...");
-        Set<String> movieFeaturesKeys = RedisClient.getInstance().keys(movieFeaturesPrefix + "*");
-        int validFeaturesCount = 0;
-        for (String movieFeaturesKey : movieFeaturesKeys){
-            String movieId = movieFeaturesKey.split(":")[1];
-            Movie m = getMovieById(Integer.parseInt(movieId));
-            if (null == m) {
-                continue;
-            }
-            m.setMovieFeatures(RedisClient.getInstance().hgetAll(movieFeaturesKey));
-            validFeaturesCount++;
-        }
-        System.out.println("Loading movie features completed. " + validFeaturesCount + " movie features in total.");
+        System.out.println("🚀 Using optimized batch loading for movie features from Redis ...");
+        int validFeaturesCount = BatchDataLoader.batchLoadMovieFeatures(this.movieMap, movieFeaturesPrefix);
+        System.out.println("✅ Optimized batch loading completed. " + validFeaturesCount + " movie features loaded.");
     }
 
     // 加载用户嵌入向量
     private void loadUserEmb(String userEmbPath, String embKey) throws Exception{
         if (Config.EMB_DATA_SOURCE.equals(Config.DATA_SOURCE_FILE)) {
+            PerformanceMonitor.startTimer("LoadUserEmb_File");
             System.out.println("Loading user embedding from " + userEmbPath + " ...");
             int validEmbCount = 0;
             try (Scanner scanner = new Scanner(new File(userEmbPath))) {
@@ -194,7 +185,13 @@ public class DataManager {
                     }
                 }
             }
+            PerformanceMonitor.endTimer("LoadUserEmb_File");
             System.out.println("Loading user embedding completed. " + validEmbCount + " user embeddings in total.");
+        } else {
+            // 使用批量加载器优化Redis加载
+            System.out.println("🚀 Using optimized batch loading for user embeddings from Redis ...");
+            int validEmbCount = BatchDataLoader.batchLoadUserEmbeddings(this.userMap, embKey + ":");
+            System.out.println("✅ Optimized batch loading completed. " + validEmbCount + " user embeddings loaded.");
         }
     }
 

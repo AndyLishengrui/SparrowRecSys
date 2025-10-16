@@ -3,6 +3,7 @@ package com.sparrowrecsys.online.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparrowrecsys.online.recprocess.RecForYouProcess;
 import com.sparrowrecsys.online.util.ABTest;
+import com.sparrowrecsys.online.util.PerformanceMonitor;
 import com.sparrowrecsys.online.datamanager.Movie;
 import com.sparrowrecsys.online.util.Config;
 
@@ -43,8 +44,13 @@ public class RecForYouService extends HttpServlet {
                 model = ABTest.getConfigByUserId(userId);
             }
 
-            // 获取推荐电影列表
+            // 获取推荐电影列表 (添加性能监控)
+            String timerKey = "RecForYouService.getRecList_user" + userId + "_model" + model;
+            PerformanceMonitor.startTimer(timerKey);
+            
             List<Movie> movies = RecForYouProcess.getRecList(Integer.parseInt(userId), Integer.parseInt(size), model);
+            
+            PerformanceMonitor.endTimer(timerKey);
 
             // 将电影列表转换为JSON格式并返回
             ObjectMapper mapper = new ObjectMapper();

@@ -3,6 +3,7 @@ package com.sparrowrecsys.online.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparrowrecsys.online.datamanager.Movie;
 import com.sparrowrecsys.online.recprocess.SimilarMovieProcess;
+import com.sparrowrecsys.online.util.PerformanceMonitor;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -34,8 +35,13 @@ public class SimilarMovieService extends HttpServlet {
             // 获取计算相似度的模型参数，例如embedding, graph-embedding
             String model = request.getParameter("model");
 
-            // 使用 SimilarMovieProcess 获取相似电影列表
+            // 使用 SimilarMovieProcess 获取相似电影列表 (添加性能监控)
+            String timerKey = "SimilarMovieService.getRecList_movie" + movieId + "_model" + model;
+            PerformanceMonitor.startTimer(timerKey);
+            
             List<Movie> movies = SimilarMovieProcess.getRecList(Integer.parseInt(movieId), Integer.parseInt(size), model);
+            
+            PerformanceMonitor.endTimer(timerKey);
 
             // 将电影列表转换为JSON格式并返回
             ObjectMapper mapper = new ObjectMapper();
